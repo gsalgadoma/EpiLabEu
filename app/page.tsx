@@ -5,6 +5,16 @@ import { Activity, ArrowRight, CheckCircle2, FlaskConical, HeartPulse, Microscop
 
 type Module = 'home' | 'medidas' | 'diagnostico' | 'disenos' | 'challenge';
 
+type MeasureConfig = {
+  label: string;
+  numeratorLabel: string;
+  denominatorLabel: string;
+  helper?: string;
+  interpretation: string;
+  defaultMultiplier: number;
+  denominatorMode?: 'direct' | 'atRisk';
+};
+
 const designs = [
   { q: 'Queremos estimar la frecuencia actual de obesidad en estudiantes de Enfermería.', a: 'Transversal', why: 'Mide exposición y desenlace en un punto o periodo definido.' },
   { q: 'Seguimos durante 5 años a enfermeras expuestas y no expuestas a turnos nocturnos para observar hipertensión.', a: 'Cohorte', why: 'Parte desde la exposición y observa la aparición posterior del desenlace.' },
@@ -13,6 +23,11 @@ const designs = [
 ];
 
 function percent(n: number) { return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—'; }
+function formatResult(value: number, multiplier: number) {
+  if (!Number.isFinite(value)) return '—';
+  if (multiplier === 100) return `${(value * 100).toFixed(2)}%`;
+  return `${(value * multiplier).toFixed(2)} por ${multiplier.toLocaleString('es-CL')}`;
+}
 
 export default function Page() {
   const [module, setModule] = useState<Module>('home');
@@ -40,7 +55,7 @@ export default function Page() {
 
 function Home({ onGo }: { onGo: (m: Module) => void }) {
   const cards = [
-    ['medidas', Activity, '01', 'Medidas epidemiológicas', 'Prevalencia, incidencia, mortalidad y letalidad con interpretación aplicada.'],
+    ['medidas', Activity, '01', 'Medidas epidemiológicas', 'Prevalencia, incidencia, mortalidad, letalidad y otras medidas con interpretación aplicada.'],
     ['diagnostico', Microscope, '02', 'Pruebas diagnósticas', 'Tabla 2×2, sensibilidad, especificidad, VPP y VPN.'],
     ['disenos', FlaskConical, '03', 'Diseños epidemiológicos', 'Reconoce el diseño adecuado a partir de problemas de Enfermería.'],
     ['challenge', HeartPulse, '04', 'EPI Challenge', 'Caso integrador con decisiones, cálculo y retroalimentación inmediata.'],
@@ -72,17 +87,129 @@ function Shell({ kicker, title, text, children }: any) {
 }
 
 function Medidas() {
-  const [type, setType] = useState('prevalencia');
-  const [a, setA] = useState(40); const [b, setB] = useState(250);
-  const result = b > 0 ? a / b : NaN;
-  const labels:any = {
-    prevalencia:['Casos existentes','Población total','Proporción de personas que presentan la condición en el momento o periodo estudiado.'],
-    incidencia:['Casos nuevos','Población en riesgo','Proporción de personas en riesgo que desarrollan el evento durante el periodo.'],
-    mortalidad:['Defunciones','Población','Frecuencia de muertes en la población durante el periodo.'],
-    letalidad:['Defunciones por la enfermedad','Casos de la enfermedad','Proporción de personas enfermas que fallecen por esa enfermedad.']
+  const configs: Record<string, MeasureConfig> = {
+    prevalencia: {
+      label: 'Prevalencia',
+      numeratorLabel: 'Casos existentes',
+      denominatorLabel: 'Población total',
+      interpretation: 'Proporción de personas que presentan la condición en el momento o periodo estudiado.',
+      defaultMultiplier: 100,
+    },
+    incidencia: {
+      label: 'Incidencia acumulada',
+      numeratorLabel: 'Casos nuevos durante el período',
+      denominatorLabel: 'Población en riesgo al inicio',
+      helper: 'La población en riesgo excluye a quienes ya tenían la enfermedad al inicio.',
+      interpretation: 'Proporción de personas en riesgo que desarrollan el evento durante el período.',
+      defaultMultiplier: 100,
+      denominatorMode: 'atRisk',
+    },
+    densidad: {
+      label: 'Tasa de incidencia',
+      numeratorLabel: 'Casos nuevos',
+      denominatorLabel: 'Personas-tiempo',
+      helper: 'Usa la suma del tiempo aportado por cada persona en seguimiento.',
+      interpretation: 'Velocidad con que aparecen casos nuevos en relación con el tiempo total observado.',
+      defaultMultiplier: 1000,
+    },
+    mortalidad: {
+      label: 'Mortalidad general',
+      numeratorLabel: 'Defunciones totales',
+      denominatorLabel: 'Población media del período',
+      interpretation: 'Frecuencia de muertes en la población durante el período.',
+      defaultMultiplier: 1000,
+    },
+    mortalidadEspecifica: {
+      label: 'Mortalidad específica por causa',
+      numeratorLabel: 'Defunciones por la causa',
+      denominatorLabel: 'Población correspondiente',
+      interpretation: 'Frecuencia de muertes por una causa específica en la población estudiada.',
+      defaultMultiplier: 100000,
+    },
+    letalidad: {
+      label: 'Letalidad',
+      numeratorLabel: 'Defunciones por la enfermedad',
+      denominatorLabel: 'Casos de la enfermedad',
+      interpretation: 'Proporción de personas enfermas que fallecen por esa enfermedad.',
+      defaultMultiplier: 100,
+    },
+    natalidad: {
+      label: 'Tasa de natalidad',
+      numeratorLabel: 'Nacidos vivos durante el período',
+      denominatorLabel: 'Población media del período',
+      interpretation: 'Frecuencia de nacidos vivos en relación con la población durante el período.',
+      defaultMultiplier: 1000,
+    },
+    ataque: {
+      label: 'Tasa de ataque',
+      numeratorLabel: 'Casos nuevos durante el brote',
+      denominatorLabel: 'Población expuesta o en riesgo',
+      interpretation: 'Proporción de personas expuestas que enferman durante un brote o episodio agudo.',
+      defaultMultiplier: 100,
+    },
   };
-  return <Shell kicker="HERRAMIENTA 01" title="Calculadora epidemiológica" text="No basta con obtener el número: identifica qué mide y cómo debe interpretarse.">
-    <div className="tool-grid"><div className="panel"><label>Medida</label><select value={type} onChange={e=>setType(e.target.value)}><option value="prevalencia">Prevalencia</option><option value="incidencia">Incidencia acumulada</option><option value="mortalidad">Mortalidad</option><option value="letalidad">Letalidad</option></select><div className="input-grid"><div><label>{labels[type][0]}</label><input type="number" value={a} onChange={e=>setA(+e.target.value)} /></div><div><label>{labels[type][1]}</label><input type="number" value={b} onChange={e=>setB(+e.target.value)} /></div></div><div className="formula">{a} ÷ {b} × 100</div></div><div className="result-card"><span>RESULTADO</span><strong>{percent(result)}</strong><p>{labels[type][2]}</p><div className="feedback"><CheckCircle2/> Interprétalo siempre en relación con la población y el periodo estudiado.</div></div></div>
+
+  const [type, setType] = useState('prevalencia');
+  const [numerator, setNumerator] = useState(40);
+  const [denominator, setDenominator] = useState(250);
+  const [totalPopulation, setTotalPopulation] = useState(1200);
+  const [existingCases, setExistingCases] = useState(80);
+  const [multiplier, setMultiplier] = useState(configs.prevalencia.defaultMultiplier);
+
+  const config = configs[type];
+  const effectiveDenominator = config.denominatorMode === 'atRisk'
+    ? Math.max(totalPopulation - existingCases, 0)
+    : denominator;
+  const result = effectiveDenominator > 0 ? numerator / effectiveDenominator : NaN;
+
+  function changeMeasure(next: string) {
+    setType(next);
+    setMultiplier(configs[next].defaultMultiplier);
+  }
+
+  return <Shell kicker="HERRAMIENTA 01" title="Calculadora epidemiológica" text="Primero identifica correctamente el numerador y la población que corresponde al denominador. Luego calcula e interpreta.">
+    <div className="tool-grid">
+      <div className="panel">
+        <label>Medida epidemiológica</label>
+        <select value={type} onChange={e=>changeMeasure(e.target.value)}>
+          {Object.entries(configs).map(([key, item]) => <option value={key} key={key}>{item.label}</option>)}
+        </select>
+
+        {config.denominatorMode === 'atRisk' ? <>
+          <div className="input-grid">
+            <div><label>Población total al inicio</label><input type="number" min="0" value={totalPopulation} onChange={e=>setTotalPopulation(+e.target.value)} /></div>
+            <div><label>Casos existentes al inicio</label><input type="number" min="0" value={existingCases} onChange={e=>setExistingCases(+e.target.value)} /></div>
+            <div><label>{config.numeratorLabel}</label><input type="number" min="0" value={numerator} onChange={e=>setNumerator(+e.target.value)} /></div>
+            <div><label>Población en riesgo calculada</label><input type="number" value={effectiveDenominator} readOnly /></div>
+          </div>
+          <div className="feedback">Población en riesgo = población total − casos existentes = {totalPopulation} − {existingCases} = <b>{effectiveDenominator}</b></div>
+        </> : <div className="input-grid">
+          <div><label>{config.numeratorLabel}</label><input type="number" min="0" value={numerator} onChange={e=>setNumerator(+e.target.value)} /></div>
+          <div><label>{config.denominatorLabel}</label><input type="number" min="0" value={denominator} onChange={e=>setDenominator(+e.target.value)} /></div>
+        </div>}
+
+        {config.helper && <div className="feedback">{config.helper}</div>}
+
+        <label>Expresar resultado como</label>
+        <select value={multiplier} onChange={e=>setMultiplier(+e.target.value)}>
+          <option value={100}>Porcentaje (%)</option>
+          <option value={1000}>Por 1.000</option>
+          <option value={10000}>Por 10.000</option>
+          <option value={100000}>Por 100.000</option>
+        </select>
+
+        <div className="formula">
+          {numerator} ÷ {effectiveDenominator || '—'} × {multiplier.toLocaleString('es-CL')}
+        </div>
+      </div>
+
+      <div className="result-card">
+        <span>RESULTADO</span>
+        <strong>{formatResult(result, multiplier)}</strong>
+        <p>{config.interpretation}</p>
+        <div className="feedback"><CheckCircle2/> Interprétalo siempre en relación con la población correcta y el período estudiado.</div>
+      </div>
+    </div>
   </Shell>;
 }
 
