@@ -1,26 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Activity, ArrowLeft, ArrowRight, BookOpen, CheckCircle2, CircleHelp,
-  FlaskConical, HeartPulse, Landmark, Microscope, Network, RotateCcw,
-  ShieldCheck, Stethoscope, UsersRound
+  Activity, ArrowRight, BookOpen, CheckCircle2, FlaskConical, HeartPulse,
+  Microscope, RotateCcw, ShieldCheck, Stethoscope, Users, MapPinned,
+  Landmark, Shuffle, GraduationCap, ClipboardCheck, ChevronRight,
 } from 'lucide-react';
+import {
+  lessons, dssCases, outbreakCases, asisCases, policyCases,
+  designCases, challengeQuestions, NursingCase,
+} from './content';
 
-type Screen = 'home' | 'unidad1' | 'medidas' | 'diagnostico' | 'disenos' | 'challenge';
-type LessonId = 'fundamentos' | 'historia' | 'dss' | 'situacion' | 'sistemas' | 'politicas';
-
-type Lesson = {
-  id: LessonId;
-  number: string;
-  title: string;
-  subtitle: string;
-  intro: string;
-  concepts: { title: string; text: string }[];
-  takeaways: string[];
-  quiz: { question: string; options: string[]; correct: number; feedback: string };
-  reading?: string[];
-};
+type Module = 'home' | 'unidad1' | 'enfermeria' | 'medidas' | 'diagnostico' | 'disenos' | 'challenge';
+type LabKey = 'dss' | 'brote' | 'asis' | 'politica';
+type LessonTab = 'aprende' | 'aplica' | 'comprueba';
 
 type MeasureConfig = {
   label: string;
@@ -32,96 +25,6 @@ type MeasureConfig = {
   denominatorMode?: 'direct' | 'atRisk';
 };
 
-const lessons: Lesson[] = [
-  {
-    id: 'fundamentos', number: '01', title: 'Introducción a la Salud Pública',
-    subtitle: 'Población, bienestar y acción colectiva',
-    intro: 'La salud pública estudia la salud y la enfermedad en poblaciones y busca proteger, promover y mejorar el bienestar mediante prevención, políticas, programas y acción organizada.',
-    concepts: [
-      { title: 'Salud pública', text: 'Su unidad de interés es la población. Integra promoción de la salud, prevención de enfermedades, protección sanitaria y mejora de los sistemas de salud.' },
-      { title: 'Clínica vs. salud pública', text: 'La clínica se centra principalmente en diagnóstico y tratamiento individual; la salud pública analiza problemas colectivos y actúa mediante programas, vigilancia, educación y políticas.' },
-      { title: 'Trabajo interdisciplinario', text: 'Integra epidemiología, bioestadística, demografía, economía, ciencias biológicas, administración, política, psicología, antropología y sociología.' },
-      { title: 'Funciones esenciales', text: 'Conocer los problemas de salud, prevenir y promover, proteger a la población y mejorar continuamente el sistema utilizando evidencia.' },
-    ],
-    takeaways: ['Pensar en poblaciones, no solo en individuos.', 'Usar información para priorizar necesidades.', 'Combinar prevención, promoción, protección y políticas públicas.'],
-    quiz: { question: '¿Cuál de las siguientes acciones representa mejor un enfoque de salud pública?', options: ['Ajustar el tratamiento de un paciente con influenza', 'Implementar una campaña comunal de vacunación y vigilancia', 'Solicitar una radiografía a una persona', 'Indicar un antibiótico individual'], correct: 1, feedback: 'La salud pública actúa sobre poblaciones mediante intervenciones colectivas como vacunación, vigilancia, educación y políticas.' },
-  },
-  {
-    id: 'historia', number: '02', title: 'Hitos históricos de la Salud Pública',
-    subtitle: 'De la higiene urbana al método epidemiológico',
-    intro: 'La salud pública moderna se construyó como respuesta a problemas sociales, ambientales y científicos que obligaron a intervenir más allá del individuo.',
-    concepts: [
-      { title: 'Revolución Industrial', text: 'La urbanización acelerada, el hacinamiento y la falta de agua potable y alcantarillado favorecieron epidemias y evidenciaron la necesidad de intervenciones colectivas.' },
-      { title: 'John Snow · 1854', text: 'Investigó un brote de cólera mediante mapas y entrevistas, relacionó los casos con agua contaminada y mostró el valor de la evidencia para controlar brotes.' },
-      { title: 'Teoría germinal', text: 'Pasteur y Koch ayudaron a establecer que microorganismos específicos causan enfermedades, fortaleciendo higiene, esterilización, vacunación y prevención.' },
-      { title: 'Salud como derecho', text: 'La evolución posterior incorporó seguridad social, servicios nacionales de salud y el reconocimiento de la salud como responsabilidad colectiva y derecho.' },
-    ],
-    takeaways: ['Los problemas sanitarios cambian la organización social.', 'La observación sistemática puede transformar una política sanitaria.', 'La prevención moderna combina ambiente, evidencia y organización del Estado.'],
-    quiz: { question: '¿Qué elemento distingue especialmente el aporte de John Snow?', options: ['Descubrió el primer antibiótico', 'Utilizó evidencia poblacional para investigar un brote', 'Creó el primer hospital', 'Demostró la teoría genética'], correct: 1, feedback: 'Snow utilizó mapas, entrevistas y patrones poblacionales para relacionar el brote de cólera con una fuente de agua.' },
-  },
-  {
-    id: 'dss', number: '03', title: 'Determinantes Sociales de la Salud',
-    subtitle: 'Comprender por qué la salud se distribuye de forma desigual',
-    intro: 'Los DSS corresponden a las condiciones en que las personas nacen, crecen, viven, trabajan y envejecen, incluido el sistema de salud. Ayudan a explicar diferencias e inequidades en salud.',
-    concepts: [
-      { title: 'Equidad', text: 'La equidad implica ausencia de diferencias injustas, evitables o remediables en salud entre grupos definidos social, económica, demográfica o geográficamente.' },
-      { title: 'DSS estructurales', text: 'Contexto socioeconómico y político, posición social, educación, ocupación e ingreso contribuyen a producir estratificación social e inequidades.' },
-      { title: 'DSS intermediarios', text: 'Incluyen condiciones materiales, factores psicosociales, conductas asociadas a salud, factores biológicos y el propio sistema de salud.' },
-      { title: 'Exposición y vulnerabilidad diferencial', text: 'Los grupos sociales pueden estar expuestos a riesgos distintos, presentar diferente vulnerabilidad y sufrir consecuencias sociales y económicas desiguales.' },
-    ],
-    takeaways: ['Desigualdad no es sinónimo automático de inequidad.', 'Los estilos de vida están condicionados por contextos sociales.', 'El sistema de salud puede reducir o reproducir brechas.'],
-    quiz: { question: '¿Cuál corresponde mejor a un determinante estructural?', options: ['Tipo de vivienda', 'Estrés psicosocial', 'Nivel educacional', 'Acceso inmediato a un CESFAM'], correct: 2, feedback: 'Educación, ocupación e ingreso son indicadores centrales de posición socioeconómica y determinantes estructurales.' },
-  },
-  {
-    id: 'situacion', number: '04', title: 'Situación de Salud de la Población',
-    subtitle: 'Conocer → decidir → actuar',
-    intro: 'El análisis de situación de salud utiliza información para describir necesidades, establecer prioridades, planificar acciones, movilizar recursos y evaluar intervenciones.',
-    concepts: [
-      { title: 'ASIS', text: 'Integra conceptos, métodos y actividades para medir y monitorear el proceso salud-enfermedad-servicios y apoyar una gestión oportuna, participativa y estratégica.' },
-      { title: 'Transición demográfica', text: 'El paso desde altas tasas de natalidad y mortalidad hacia tasas bajas modifica la estructura por edad y aumenta la relevancia del envejecimiento y la cronicidad.' },
-      { title: 'Pirámide poblacional', text: 'Permite visualizar la distribución por edad y sexo. Una forma regresiva refleja baja natalidad, predominio adulto y envejecimiento creciente.' },
-      { title: 'Más allá de los registros', text: 'Muertes, hospitalizaciones y consultas representan solo parte de la situación de salud; también importan enfermedad no consultante, funcionalidad, factores de riesgo y calidad de vida.' },
-    ],
-    takeaways: ['Los datos deben transformarse en decisiones.', 'La estructura demográfica condiciona las necesidades sanitarias.', 'La morbilidad registrada puede subestimar el problema real.'],
-    quiz: { question: '¿Cuál es el propósito principal del análisis de situación de salud?', options: ['Describir datos sin tomar decisiones', 'Apoyar priorización, planificación y evaluación', 'Reemplazar la atención clínica', 'Medir únicamente mortalidad'], correct: 1, feedback: 'El ASIS busca producir información útil para priorizar, planificar, actuar y evaluar políticas e intervenciones.' },
-  },
-  {
-    id: 'sistemas', number: '05', title: 'Sistemas de Salud',
-    subtitle: 'Financiamiento, organización y respuesta a las necesidades',
-    intro: 'Un sistema de salud reúne organizaciones, instituciones y recursos orientados a mejorar la salud. Debe mantener a la población sana, tratar a quienes enferman y proteger financieramente a las familias.',
-    concepts: [
-      { title: 'Modelos generales', text: 'Los modelos comparados incluyen Servicio Nacional de Salud (Beveridge), Seguridad Social (Bismarck), Seguro Nacional y pago predominantemente privado.' },
-      { title: 'Financiamiento', text: 'Puede provenir de impuestos, cotizaciones o seguros y pagos directos. La forma de financiamiento influye en acceso, equidad y protección financiera.' },
-      { title: 'Chile: sistema mixto', text: 'El sistema chileno combina aseguramiento público mediante FONASA y aseguramiento privado mediante ISAPRE, junto con prestadores públicos y privados.' },
-      { title: 'Desafíos del sistema', text: 'Fragmentación, listas de espera, gasto de bolsillo, brechas de acceso y envejecimiento obligan a fortalecer coordinación, atención primaria e integración.' },
-    ],
-    takeaways: ['No existe un único modelo de sistema de salud.', 'Financiamiento y provisión son dimensiones diferentes.', 'Chile combina componentes públicos y privados.'],
-    quiz: { question: '¿Qué característica describe al sistema de salud chileno?', options: ['Es exclusivamente privado', 'Es exclusivamente estatal', 'Es un sistema mixto con FONASA e ISAPRE', 'No posee aseguramiento'], correct: 2, feedback: 'Chile posee un sistema mixto con aseguramiento público y privado y una provisión también mixta.' },
-    reading: ['Aguilera (2025): El sistema de salud chileno: trayectoria, desafíos y transformaciones.'],
-  },
-  {
-    id: 'politicas', number: '06', title: 'Políticas y Reforma de Salud',
-    subtitle: 'Del problema público a la evaluación de una política',
-    intro: 'Las políticas públicas de salud surgen de problemas puestos en agenda y se expresan mediante leyes, programas, normas y estrategias. Su desarrollo requiere diagnóstico, factibilidad, decisión, implementación y evaluación.',
-    concepts: [
-      { title: 'Ciclo de política', text: 'Definición del problema → diagnóstico de causas → desarrollo → decisión política → implementación → evaluación → redefinición.' },
-      { title: 'Políticas y DSS', text: 'Las políticas sanitarias buscan asegurar condiciones saludables, acceso a atención y bienestar, idealmente actuando sobre determinantes sociales y derechos humanos.' },
-      { title: 'Reforma y GES', text: 'La reforma chilena fortaleció un régimen de garantías explícitas orientadas a acceso, calidad, oportunidad y protección financiera para problemas priorizados.' },
-      { title: 'Caso Ley Ricarte Soto', text: 'La Ley 20.850 crea protección financiera para diagnósticos y tratamientos de alto costo y permite discutir priorización, equidad, evidencia, recursos y participación de actores.' },
-    ],
-    takeaways: ['Las políticas requieren definir claramente el problema.', 'La implementación y evaluación son tan importantes como el diseño.', 'Priorizar implica decisiones éticas, económicas y sanitarias.'],
-    quiz: { question: '¿Cuál NO corresponde a una garantía explícita del GES?', options: ['Acceso', 'Calidad', 'Oportunidad', 'Rentabilidad'], correct: 3, feedback: 'GES contempla acceso, calidad, oportunidad y protección financiera.' },
-    reading: ['Bastías y Valdivia: Reforma de salud en Chile y evolución del GES.', 'Saldías-Fernández et al. (2025): Ley Ricarte Soto, un particular estudio de caso para reflexionar.'],
-  },
-];
-
-const designs = [
-  { q: 'Queremos estimar la frecuencia actual de obesidad en estudiantes de Enfermería.', a: 'Transversal', why: 'Mide exposición y desenlace en un punto o periodo definido.' },
-  { q: 'Seguimos durante 5 años a enfermeras expuestas y no expuestas a turnos nocturnos para observar hipertensión.', a: 'Cohorte', why: 'Parte desde la exposición y observa la aparición posterior del desenlace.' },
-  { q: 'Comparamos pacientes con úlceras por presión con pacientes sin úlceras y revisamos exposición previa a inmovilidad.', a: 'Caso-control', why: 'Parte desde el desenlace y reconstruye exposiciones previas.' },
-  { q: 'Asignamos aleatoriamente una intervención educativa sobre autocuidado y comparamos resultados entre grupos.', a: 'Ensayo clínico aleatorizado', why: 'Existe intervención y asignación aleatoria.' },
-];
-
 function percent(n: number) { return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—'; }
 function formatResult(value: number, multiplier: number) {
   if (!Number.isFinite(value)) return '—';
@@ -130,120 +33,228 @@ function formatResult(value: number, multiplier: number) {
 }
 
 export default function Page() {
-  const [screen, setScreen] = useState<Screen>('home');
-  const [lessonId, setLessonId] = useState<LessonId>('fundamentos');
+  const [module, setModule] = useState<Module>('home');
+  const [completed, setCompleted] = useState<string[]>([]);
 
-  function openLesson(id: LessonId) {
-    setLessonId(id);
-    setScreen('unidad1');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  useEffect(() => {
+    const saved = localStorage.getItem('epilab-completed');
+    if (saved) setCompleted(JSON.parse(saved));
+  }, []);
+
+  function toggleCompleted(id: string) {
+    const next = completed.includes(id) ? completed.filter(x => x !== id) : [...completed, id];
+    setCompleted(next);
+    localStorage.setItem('epilab-completed', JSON.stringify(next));
   }
 
   return <main>
     <header className="topbar">
-      <button className="brand" onClick={() => setScreen('home')}>
+      <button className="brand" onClick={() => setModule('home')}>
         <span>EPI·LAB</span><small>Epidemiología y Salud Pública · Enfermería UANDES</small>
       </button>
       <nav>
-        <button onClick={() => setScreen('unidad1')}>Unidad I</button>
-        <button onClick={() => setScreen('medidas')}>Epidemiología</button>
-        <button className="nav-cta" onClick={() => setScreen('challenge')}>EPI Challenge</button>
+        <button onClick={() => setModule('unidad1')}>Unidad I</button>
+        <button onClick={() => setModule('enfermeria')}>Enfermería en acción</button>
+        <button onClick={() => setModule('medidas')}>Medidas</button>
+        <button className="nav-cta" onClick={() => setModule('challenge')}>Challenge</button>
       </nav>
     </header>
 
-    {screen === 'home' && <Home onGo={setScreen} onLesson={openLesson} />}
-    {screen === 'unidad1' && <Unidad1 selected={lessonId} onSelect={setLessonId} />}
-    {screen === 'medidas' && <Medidas />}
-    {screen === 'diagnostico' && <Diagnostico />}
-    {screen === 'disenos' && <Disenos />}
-    {screen === 'challenge' && <Challenge />}
+    {module === 'home' && <Home onGo={setModule} completed={completed.length} />}
+    {module === 'unidad1' && <Unidad1 completed={completed} onToggle={toggleCompleted} />}
+    {module === 'enfermeria' && <NursingLab />}
+    {module === 'medidas' && <Medidas />}
+    {module === 'diagnostico' && <Diagnostico />}
+    {module === 'disenos' && <Disenos />}
+    {module === 'challenge' && <Challenge />}
 
     <footer>
-      <div className="footer-brand"><b>Universidad de los Andes</b><span>Facultad de Enfermería y Obstetricia</span></div>
-      <span>EPI·LAB · Recurso docente 2026</span>
+      <b>EPI·LAB</b> · Facultad de Enfermería y Obstetricia · Universidad de los Andes · 2026
     </footer>
   </main>;
 }
 
-function Home({ onGo, onLesson }: { onGo: (s: Screen) => void; onLesson: (id: LessonId) => void }) {
+function Home({ onGo, completed }: { onGo: (m: Module) => void; completed: number }) {
+  const cards = [
+    ['unidad1', BookOpen, '01', 'Unidad I · Salud Pública', 'Seis clases con aprendizaje breve, aplicación a Enfermería y autoevaluación.'],
+    ['enfermeria', Stethoscope, '02', 'Enfermería en acción', 'Casos variables de DSS, brotes, análisis de situación de salud y políticas sanitarias.'],
+    ['medidas', Activity, '03', 'Laboratorio epidemiológico', 'Calcula e interpreta prevalencia, incidencia, mortalidad, letalidad y otras medidas.'],
+    ['challenge', GraduationCap, '04', 'EPI Challenge', 'Desafío integrador con banco amplio de preguntas y retroalimentación inmediata.'],
+  ] as const;
+
   return <>
     <section className="hero">
       <div className="hero-copy">
-        <span className="eyebrow">EPIDEMIOLOGÍA Y SALUD PÚBLICA · ENFERMERÍA UANDES</span>
-        <h1>Comprende la salud poblacional. <em>Aprende tomando decisiones.</em></h1>
-        <p>EPI·LAB integra los contenidos de Salud Pública con herramientas interactivas de Epidemiología para estudiar, practicar e interpretar.</p>
+        <span className="eyebrow">PLATAFORMA INTERACTIVA · ENFERMERÍA UANDES</span>
+        <h1>Aprende salud pública <em>tomando decisiones.</em></h1>
+        <p>Una ruta de aprendizaje centrada en situaciones que una futura enfermera o enfermero debe reconocer, interpretar y resolver.</p>
         <div className="hero-actions">
-          <button className="primary" onClick={() => onGo('unidad1')}>Explorar Unidad I <ArrowRight size={18}/></button>
-          <button className="secondary" onClick={() => onGo('medidas')}>Ir al laboratorio epidemiológico</button>
+          <button className="primary" onClick={() => onGo('unidad1')}>Comenzar Unidad I <ArrowRight size={18}/></button>
+          <button className="secondary" onClick={() => onGo('enfermeria')}>Ir a simulaciones</button>
+        </div>
+        <div className="hero-stats">
+          <div><b>6</b><span>clases guiadas</span></div>
+          <div><b>28+</b><span>casos variables</span></div>
+          <div><b>{completed}/6</b><span>clases marcadas</span></div>
         </div>
       </div>
       <div className="hero-visual">
-        <div className="faculty-mark"><span>UANDES</span><b>Facultad de<br/>Enfermería y<br/>Obstetricia</b></div>
         <div className="pulse">EPI<span>LAB</span></div>
+        <div className="orb o1">DSS</div><div className="orb o2">ASIS</div><div className="orb o3">Dx</div><div className="orb o4">APS</div>
       </div>
     </section>
 
-    <section className="section unit-section">
-      <div className="section-title"><span>UNIDAD I · SALUD PÚBLICA</span><h2>De los fundamentos a las políticas de salud</h2><p>Seis estaciones de estudio basadas en los contenidos de la asignatura.</p></div>
-      <div className="lesson-grid">
-        {lessons.map((l, i) => <button className="lesson-card" key={l.id} onClick={() => onLesson(l.id)}>
-          <div className="lesson-number">{l.number}</div><div><small>CLASE {i + 1}</small><h3>{l.title}</h3><p>{l.subtitle}</p></div><ArrowRight size={18}/>
-        </button>)}
-      </div>
+    <section className="section">
+      <div className="section-title"><span>RUTA DE APRENDIZAJE</span><h2>De los conceptos a la decisión profesional</h2><p>La plataforma evita que el estudio sea solo memorístico: cada módulo pide observar, priorizar, interpretar y actuar.</p></div>
+      <div className="grid4">{cards.map(([id, Icon, n, title, text]) => <button className="module-card" key={id} onClick={() => onGo(id)}><div className="module-top"><Icon/><b>{n}</b></div><h3>{title}</h3><p>{text}</p><span>Explorar <ArrowRight size={16}/></span></button>)}</div>
     </section>
 
-    <section className="section epi-section">
-      <div className="section-title"><span>UNIDAD II · EPIDEMIOLOGÍA</span><h2>Herramientas para aplicar lo aprendido</h2><p>Calcula, interpreta y decide a partir de escenarios de Enfermería y salud pública.</p></div>
-      <div className="grid4">
-        <ToolCard icon={<Activity/>} n="01" title="Medidas epidemiológicas" text="Prevalencia, incidencia, mortalidad, natalidad, letalidad y tasa de ataque." onClick={() => onGo('medidas')} />
-        <ToolCard icon={<Microscope/>} n="02" title="Pruebas diagnósticas" text="Tabla 2×2, sensibilidad, especificidad, VPP y VPN." onClick={() => onGo('diagnostico')} />
-        <ToolCard icon={<FlaskConical/>} n="03" title="Diseños epidemiológicos" text="Reconoce el diseño adecuado a partir de problemas de Enfermería." onClick={() => onGo('disenos')} />
-        <ToolCard icon={<HeartPulse/>} n="04" title="EPI Challenge" text="Integra conceptos en preguntas con retroalimentación inmediata." onClick={() => onGo('challenge')} />
+    <section className="section white-section">
+      <div className="section-title"><span>PARA DOS SECCIONES DE 60</span><h2>Variabilidad suficiente para trabajar en grupos sin repetir siempre el mismo caso</h2></div>
+      <div className="feature-grid">
+        <div className="feature"><Shuffle/><h3>Variantes aleatorias</h3><p>Cada laboratorio dispone de múltiples escenarios. Un clic entrega otra variante para distribuir entre grupos.</p></div>
+        <div className="feature"><Users/><h3>Trabajo colaborativo</h3><p>Los casos están pensados para discutir primero en duplas o grupos pequeños y responder después.</p></div>
+        <div className="feature"><ClipboardCheck/><h3>Feedback inmediato</h3><p>La respuesta correcta se acompaña de razonamiento, acción de Enfermería y una pregunta de reflexión.</p></div>
       </div>
     </section>
   </>;
 }
 
-function ToolCard({icon,n,title,text,onClick}:any){return <button className="module-card" onClick={onClick}><div className="module-top">{icon}<b>{n}</b></div><h3>{title}</h3><p>{text}</p><span>Explorar <ArrowRight size={16}/></span></button>}
-
-function Unidad1({ selected, onSelect }: { selected: LessonId; onSelect: (id: LessonId) => void }) {
-  const lesson = lessons.find(l => l.id === selected) || lessons[0];
-  const index = lessons.findIndex(l => l.id === lesson.id);
-  return <section className="learning-page">
-    <aside className="lesson-sidebar">
-      <span className="sidebar-kicker">UNIDAD I</span><h3>Salud Pública</h3>
-      {lessons.map(l => <button key={l.id} className={l.id === selected ? 'active' : ''} onClick={() => onSelect(l.id)}><b>{l.number}</b><span>{l.title}</span></button>)}
-    </aside>
-    <article className="lesson-content">
-      <div className="lesson-header"><span>CLASE {index + 1} · {lesson.number}</span><h1>{lesson.title}</h1><p>{lesson.intro}</p></div>
-      <div className="concept-grid">
-        {lesson.concepts.map((c, i) => <div className="concept-card" key={c.title}><div className="concept-icon">{conceptIcon(index, i)}</div><h3>{c.title}</h3><p>{c.text}</p></div>)}
-      </div>
-      <div className="learning-block"><div><span className="block-kicker">LO QUE DEBES RECORDAR</span><h2>Ideas clave</h2></div><ul>{lesson.takeaways.map(t => <li key={t}><CheckCircle2 size={18}/>{t}</li>)}</ul></div>
-      <MiniQuiz quiz={lesson.quiz}/>
-      {lesson.reading && <div className="reading-block"><BookOpen/><div><b>Lecturas de profundización</b>{lesson.reading.map(r => <p key={r}>{r}</p>)}</div></div>}
-      <div className="lesson-nav">
-        <button className="secondary dark" disabled={index === 0} onClick={() => index > 0 && onSelect(lessons[index-1].id)}><ArrowLeft size={16}/> Anterior</button>
-        <button className="primary" disabled={index === lessons.length-1} onClick={() => index < lessons.length-1 && onSelect(lessons[index+1].id)}>Siguiente <ArrowRight size={16}/></button>
-      </div>
-    </article>
-  </section>
-}
-
-function conceptIcon(lesson:number, item:number){
-  const icons = [UsersRound, Landmark, Network, Activity, ShieldCheck, CircleHelp];
-  const Icon = icons[(lesson + item) % icons.length];
-  return <Icon size={22}/>;
-}
-
-function MiniQuiz({quiz}:{quiz:Lesson['quiz']}){
-  const [picked,setPicked] = useState<number|null>(null);
-  const ok = picked === quiz.correct;
-  return <div className="mini-quiz"><div className="quiz-title"><CircleHelp/><div><span>COMPRUEBA TU APRENDIZAJE</span><h2>{quiz.question}</h2></div></div><div className="answers">{quiz.options.map((o,i)=><button key={o} onClick={()=>setPicked(i)} className={picked===null?'':i===quiz.correct?'correct':picked===i?'wrong':''}>{o}</button>)}</div>{picked!==null&&<div className={`explain ${ok?'ok':'no'}`}><b>{ok?'Correcto':'Revisa tu respuesta'}</b><p>{quiz.feedback}</p></div>}</div>
-}
-
 function Shell({ kicker, title, text, children }: any) {
   return <section className="tool-page"><div className="tool-head"><span>{kicker}</span><h1>{title}</h1><p>{text}</p></div>{children}</section>;
+}
+
+function Unidad1({ completed, onToggle }: { completed: string[]; onToggle: (id: string) => void }) {
+  const [lessonIndex, setLessonIndex] = useState(0);
+  const [tab, setTab] = useState<LessonTab>('aprende');
+  const lesson = lessons[lessonIndex];
+
+  return <Shell kicker="UNIDAD I · SALUD PÚBLICA" title="Estudia, aplica y comprueba" text="Cada clase conserva los contenidos centrales de la asignatura, pero los lleva a situaciones de Enfermería.">
+    <div className="lesson-layout">
+      <aside className="lesson-nav">
+        {lessons.map((l, i) => <button key={l.id} className={i === lessonIndex ? 'active' : ''} onClick={() => { setLessonIndex(i); setTab('aprende'); }}>
+          <span>{completed.includes(l.id) ? '✓' : l.number}</span><div><b>{l.title}</b><small>{l.subtitle}</small></div>
+        </button>)}
+      </aside>
+
+      <div className="lesson-main">
+        <div className="lesson-title"><span>CLASE {lesson.number}</span><h2>{lesson.title}</h2><p>{lesson.subtitle}</p></div>
+        <div className="tabs">
+          <button className={tab === 'aprende' ? 'active' : ''} onClick={() => setTab('aprende')}>Aprende</button>
+          <button className={tab === 'aplica' ? 'active' : ''} onClick={() => setTab('aplica')}>Aplicación a Enfermería</button>
+          <button className={tab === 'comprueba' ? 'active' : ''} onClick={() => setTab('comprueba')}>Comprueba</button>
+        </div>
+
+        {tab === 'aprende' && <div className="lesson-content">
+          <div className="summary-box"><BookOpen/><div><b>Idea central</b><p>{lesson.summary}</p></div></div>
+          <div className="concept-grid">{lesson.concepts.map(c => <div className="concept-card" key={c.title}><h3>{c.title}</h3><p>{c.text}</p></div>)}</div>
+          <div className="chips">{lesson.keyIdeas.map(k => <span key={k}>{k}</span>)}</div>
+        </div>}
+
+        {tab === 'aplica' && <div className="lesson-content">
+          <div className="nursing-box"><Stethoscope/><div><b>¿Qué significa esto para Enfermería?</b><p>{lesson.nursingLens}</p></div></div>
+          <TransferExercise lessonId={lesson.id} />
+        </div>}
+
+        {tab === 'comprueba' && <LessonQuiz lessonIndex={lessonIndex} />}
+
+        <div className="lesson-bottom">
+          <button className={completed.includes(lesson.id) ? 'secondary dark' : 'primary'} onClick={() => onToggle(lesson.id)}>
+            {completed.includes(lesson.id) ? '✓ Clase marcada como revisada' : 'Marcar clase como revisada'}
+          </button>
+          {lessonIndex < lessons.length - 1 && <button className="secondary dark" onClick={() => { setLessonIndex(i => i + 1); setTab('aprende'); }}>Siguiente clase <ChevronRight size={17}/></button>}
+        </div>
+      </div>
+    </div>
+  </Shell>;
+}
+
+function TransferExercise({ lessonId }: { lessonId: string }) {
+  const prompts: Record<string, { scenario: string; question: string; hints: string[] }> = {
+    'salud-publica': { scenario:'En un CESFAM aumentan las consultas por síntomas respiratorios durante una misma semana.', question:'¿Qué harías además del cuidado individual para incorporar una mirada poblacional?', hints:['Buscar patrón por persona, lugar y tiempo','Revisar cobertura preventiva','Coordinar educación y vigilancia'] },
+    'historia': { scenario:'En una residencia aparecen varios cuadros gastrointestinales en poco tiempo.', question:'¿Qué elementos del método de John Snow puedes trasladar a este escenario?', hints:['Mapear casos','Explorar exposiciones comunes','Comparar enfermos y no enfermos'] },
+    'dss': { scenario:'Una persona falta a controles porque vive lejos, trabaja por turnos y no tiene red de apoyo.', question:'¿Cómo cambia tu valoración si incorporas DSS?', hints:['Barreras de acceso','Condiciones laborales','Red social y recursos'] },
+    'situacion-salud': { scenario:'Tu comuna tiene alta prevalencia de diabetes, baja cobertura de control y envejecimiento acelerado.', question:'¿Qué información necesitas antes de priorizar?', hints:['Magnitud','Tendencia','Vulnerabilidad','Capacidad de respuesta'] },
+    'sistemas': { scenario:'Un usuario no entiende dónde continuar control tras un alta hospitalaria.', question:'¿Qué rol cumple Enfermería en la navegación del sistema?', hints:['Continuidad','Derivación','Educación','Coordinación de red'] },
+    'politicas': { scenario:'Se implementa una nueva política, pero los usuarios siguen sin acceder oportunamente.', question:'¿Qué observarías para saber si el problema está en diseño o implementación?', hints:['Recursos','Flujos','Barreras reales','Indicadores de proceso'] },
+  };
+  const p = prompts[lessonId];
+  return <div className="transfer-card"><span>TRANSFERENCIA A LA PRÁCTICA</span><h3>{p.scenario}</h3><p>{p.question}</p><div className="hint-grid">{p.hints.map(x => <span key={x}>{x}</span>)}</div></div>;
+}
+
+function LessonQuiz({ lessonIndex }: { lessonIndex: number }) {
+  const items = lessons[lessonIndex].quiz;
+  const [q, setQ] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const item = items[q];
+  const done = q === items.length - 1 && picked !== null;
+
+  function choose(i: number) {
+    if (picked !== null) return;
+    setPicked(i);
+    if (i === item.answer) setScore(s => s + 1);
+  }
+  function next() { setQ(i => i + 1); setPicked(null); }
+  function reset() { setQ(0); setPicked(null); setScore(0); }
+
+  return <div className="quiz-card">
+    <span>PREGUNTA {q + 1} DE {items.length}</span><h3>{item.q}</h3>
+    <div className="answers">{item.options.map((o, i) => <button key={o} onClick={() => choose(i)} className={picked === null ? '' : i === item.answer ? 'correct' : picked === i ? 'wrong' : ''}>{o}</button>)}</div>
+    {picked !== null && <div className={`explain ${picked === item.answer ? 'ok' : 'no'}`}><b>{picked === item.answer ? 'Correcto' : 'Revisa la idea'}</b><p>{item.feedback}</p></div>}
+    <div className="case-actions"><span>Puntaje: {score}/{items.length}</span>{!done ? <button className="primary" disabled={picked === null} onClick={next}>Continuar <ArrowRight size={17}/></button> : <button className="secondary dark" onClick={reset}><RotateCcw size={17}/> Repetir</button>}</div>
+  </div>;
+}
+
+const labMeta: Record<LabKey, { title: string; subtitle: string; icon: any; cases: NursingCase[] }> = {
+  dss: { title:'DSS en la valoración de Enfermería', subtitle:'Identifica cómo contexto, acceso y vulnerabilidad cambian el cuidado.', icon:Users, cases:dssCases },
+  brote: { title:'Simulador de brotes', subtitle:'Observa patrones, formula hipótesis y decide acciones iniciales.', icon:ShieldCheck, cases:outbreakCases },
+  asis: { title:'Dashboard de situación de salud', subtitle:'Prioriza problemas poblacionales usando datos y criterios explícitos.', icon:MapPinned, cases:asisCases },
+  politica: { title:'Políticas de salud', subtitle:'Toma decisiones con recursos limitados y analiza implementación y equidad.', icon:Landmark, cases:policyCases },
+};
+
+function NursingLab() {
+  const [lab, setLab] = useState<LabKey>('dss');
+  const [idx, setIdx] = useState(0);
+  const meta = labMeta[lab];
+  const current = meta.cases[idx % meta.cases.length];
+
+  function setLabKey(k: LabKey) { setLab(k); setIdx(0); }
+  function randomCase() {
+    let next = Math.floor(Math.random() * meta.cases.length);
+    if (next === idx && meta.cases.length > 1) next = (next + 1) % meta.cases.length;
+    setIdx(next);
+  }
+
+  return <Shell kicker="ENFERMERÍA EN ACCIÓN" title="Simulaciones para aprender desde la disciplina" text="Diseñadas para trabajar individualmente, en duplas o en grupos. Cada laboratorio tiene múltiples variantes para dos secciones de 60 estudiantes.">
+    <div className="lab-tabs">
+      {(Object.keys(labMeta) as LabKey[]).map(k => { const Icon = labMeta[k].icon; return <button key={k} className={lab === k ? 'active' : ''} onClick={() => setLabKey(k)}><Icon size={18}/>{labMeta[k].title}</button>; })}
+    </div>
+    <div className="lab-intro"><div><span>{current.id}</span><h2>{meta.title}</h2><p>{meta.subtitle}</p></div><button className="secondary dark" onClick={randomCase}><Shuffle size={17}/> Otra variante</button></div>
+    <DecisionCase key={current.id} item={current} total={meta.cases.length} onNext={() => setIdx(i => (i + 1) % meta.cases.length)} />
+  </Shell>;
+}
+
+function DecisionCase({ item, total, onNext }: { item: NursingCase; total: number; onNext: () => void }) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const ok = picked === item.answer;
+  return <div className="simulation-grid">
+    <div className="scenario-card">
+      <div className="scenario-top"><span>{item.setting}</span><small>Banco de {total} variantes</small></div>
+      <h2>{item.title}</h2><p className="scenario-text">{item.scenario}</p>
+      <h4>Datos disponibles</h4><div className="data-list">{item.data.map(d => <div key={d}><CheckCircle2 size={16}/>{d}</div>)}</div>
+    </div>
+    <div className="decision-card">
+      <span>TOMA UNA DECISIÓN</span><h3>{item.question}</h3>
+      <div className="answers one-col">{item.options.map((o, i) => <button key={o} onClick={() => picked === null && setPicked(i)} className={picked === null ? '' : i === item.answer ? 'correct' : picked === i ? 'wrong' : ''}>{o}</button>)}</div>
+      {picked !== null && <>
+        <div className={`explain ${ok ? 'ok' : 'no'}`}><b>{ok ? 'Decisión adecuada' : 'Revisa el razonamiento'}</b><p>{item.feedback}</p></div>
+        <div className="nursing-action"><Stethoscope size={19}/><div><b>Acción de Enfermería</b><p>{item.nursingAction}</p></div></div>
+        <div className="reflection"><b>Para discutir en grupo</b><p>{item.reflection}</p></div>
+      </>}
+      <div className="case-actions"><span>{item.id}</span><button className="primary" disabled={picked === null} onClick={onNext}>Siguiente variante <ArrowRight size={17}/></button></div>
+    </div>
+  </div>;
 }
 
 function Medidas() {
@@ -255,28 +266,55 @@ function Medidas() {
     mortalidadEspecifica:{label:'Mortalidad específica por causa',numeratorLabel:'Defunciones por la causa',denominatorLabel:'Población correspondiente',interpretation:'Frecuencia de muertes por una causa específica en la población estudiada.',defaultMultiplier:100000},
     letalidad:{label:'Letalidad',numeratorLabel:'Defunciones por la enfermedad',denominatorLabel:'Casos de la enfermedad',interpretation:'Proporción de personas enfermas que fallecen por esa enfermedad.',defaultMultiplier:100},
     natalidad:{label:'Tasa de natalidad',numeratorLabel:'Nacidos vivos durante el período',denominatorLabel:'Población media del período',interpretation:'Frecuencia de nacidos vivos en relación con la población durante el período.',defaultMultiplier:1000},
-    ataque:{label:'Tasa de ataque',numeratorLabel:'Casos nuevos durante el brote',denominatorLabel:'Población expuesta o en riesgo',interpretation:'Proporción de personas expuestas que enferman durante un brote o episodio agudo.',defaultMultiplier:100},
+    ataque:{label:'Tasa de ataque',numeratorLabel:'Casos nuevos durante el brote',denominatorLabel:'Población expuesta o en riesgo',interpretation:'Proporción de personas expuestas que enferman durante un brote.',defaultMultiplier:100},
   };
-  const [type,setType]=useState('prevalencia'); const [numerator,setNumerator]=useState(40); const [denominator,setDenominator]=useState(250); const [totalPopulation,setTotalPopulation]=useState(1200); const [existingCases,setExistingCases]=useState(80); const [multiplier,setMultiplier]=useState(100);
-  const config=configs[type]; const effectiveDenominator=config.denominatorMode==='atRisk'?Math.max(totalPopulation-existingCases,0):denominator; const result=effectiveDenominator>0?numerator/effectiveDenominator:NaN;
-  function changeMeasure(next:string){setType(next);setMultiplier(configs[next].defaultMultiplier)}
-  return <Shell kicker="UNIDAD II · HERRAMIENTA 01" title="Calculadora epidemiológica" text="Identifica correctamente numerador, denominador y población antes de interpretar el resultado."><div className="tool-grid"><div className="panel"><label>Medida epidemiológica</label><select value={type} onChange={e=>changeMeasure(e.target.value)}>{Object.entries(configs).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select>{config.denominatorMode==='atRisk'?<><div className="input-grid"><div><label>Población total al inicio</label><input type="number" value={totalPopulation} onChange={e=>setTotalPopulation(+e.target.value)}/></div><div><label>Casos existentes al inicio</label><input type="number" value={existingCases} onChange={e=>setExistingCases(+e.target.value)}/></div><div><label>{config.numeratorLabel}</label><input type="number" value={numerator} onChange={e=>setNumerator(+e.target.value)}/></div><div><label>Población en riesgo</label><input value={effectiveDenominator} readOnly/></div></div><div className="panel-note">Población en riesgo = {totalPopulation} − {existingCases} = <b>{effectiveDenominator}</b></div></>:<div className="input-grid"><div><label>{config.numeratorLabel}</label><input type="number" value={numerator} onChange={e=>setNumerator(+e.target.value)}/></div><div><label>{config.denominatorLabel}</label><input type="number" value={denominator} onChange={e=>setDenominator(+e.target.value)}/></div></div>}{config.helper&&<div className="panel-note">{config.helper}</div>}<label>Expresar resultado como</label><select value={multiplier} onChange={e=>setMultiplier(+e.target.value)}><option value={100}>Porcentaje (%)</option><option value={1000}>Por 1.000</option><option value={10000}>Por 10.000</option><option value={100000}>Por 100.000</option></select><div className="formula">{numerator} ÷ {effectiveDenominator||'—'} × {multiplier.toLocaleString('es-CL')}</div></div><div className="result-card"><span>RESULTADO</span><strong>{formatResult(result,multiplier)}</strong><p>{config.interpretation}</p><div className="feedback"><CheckCircle2/> Relaciona siempre el resultado con la población y el período estudiado.</div></div></div></Shell>
+  const [type, setType] = useState('prevalencia');
+  const [numerator, setNumerator] = useState(40), [denominator, setDenominator] = useState(250);
+  const [totalPopulation, setTotalPopulation] = useState(1200), [existingCases, setExistingCases] = useState(80);
+  const [multiplier, setMultiplier] = useState(configs.prevalencia.defaultMultiplier);
+  const config = configs[type];
+  const effectiveDenominator = config.denominatorMode === 'atRisk' ? Math.max(totalPopulation - existingCases, 0) : denominator;
+  const result = effectiveDenominator > 0 ? numerator / effectiveDenominator : NaN;
+  function changeMeasure(next: string) { setType(next); setMultiplier(configs[next].defaultMultiplier); }
+
+  return <Shell kicker="LABORATORIO EPIDEMIOLÓGICO" title="Calculadora con poblaciones diferenciadas" text="La dificultad no está solo en dividir: está en reconocer correctamente quién pertenece al numerador y al denominador.">
+    <div className="tool-grid"><div className="panel">
+      <label>Medida epidemiológica</label><select value={type} onChange={e => changeMeasure(e.target.value)}>{Object.entries(configs).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}</select>
+      {config.denominatorMode === 'atRisk' ? <><div className="input-grid"><div><label>Población total al inicio</label><input type="number" min="0" value={totalPopulation} onChange={e => setTotalPopulation(+e.target.value)}/></div><div><label>Casos existentes al inicio</label><input type="number" min="0" value={existingCases} onChange={e => setExistingCases(+e.target.value)}/></div><div><label>{config.numeratorLabel}</label><input type="number" min="0" value={numerator} onChange={e => setNumerator(+e.target.value)}/></div><div><label>Población en riesgo calculada</label><input value={effectiveDenominator} readOnly/></div></div><div className="feedback dark-feedback">Población en riesgo = {totalPopulation} − {existingCases} = <b>{effectiveDenominator}</b></div></> : <div className="input-grid"><div><label>{config.numeratorLabel}</label><input type="number" min="0" value={numerator} onChange={e => setNumerator(+e.target.value)}/></div><div><label>{config.denominatorLabel}</label><input type="number" min="0" value={denominator} onChange={e => setDenominator(+e.target.value)}/></div></div>}
+      {config.helper && <p className="helper">{config.helper}</p>}
+      <label>Expresar resultado como</label><select value={multiplier} onChange={e => setMultiplier(+e.target.value)}><option value={100}>Porcentaje (%)</option><option value={1000}>Por 1.000</option><option value={10000}>Por 10.000</option><option value={100000}>Por 100.000</option></select>
+      <div className="formula">{numerator} ÷ {effectiveDenominator || '—'} × {multiplier.toLocaleString('es-CL')}</div>
+    </div><div className="result-card"><span>RESULTADO</span><strong>{formatResult(result,multiplier)}</strong><p>{config.interpretation}</p><div className="feedback"><CheckCircle2/> Interpreta el resultado en relación con población, período y unidad de expresión.</div></div></div>
+  </Shell>;
 }
 
-function Diagnostico(){const[vp,setVp]=useState(80),[fp,setFp]=useState(20),[fn,setFn]=useState(10),[vn,setVn]=useState(90);const se=vp/(vp+fn),sp=vn/(vn+fp),vpp=vp/(vp+fp),vpn=vn/(vn+fn);return <Shell kicker="UNIDAD II · HERRAMIENTA 02" title="Laboratorio de pruebas diagnósticas" text="Modifica la tabla 2×2 y observa cómo cambian las medidas de rendimiento diagnóstico."><div className="diag-layout"><div className="panel"><div className="table2x2"><div></div><b>Enfermedad +</b><b>Enfermedad −</b><b>Test +</b><input value={vp} onChange={e=>setVp(+e.target.value)}/><input value={fp} onChange={e=>setFp(+e.target.value)}/><b>Test −</b><input value={fn} onChange={e=>setFn(+e.target.value)}/><input value={vn} onChange={e=>setVn(+e.target.value)}/></div></div><div className="metrics"><Metric name="Sensibilidad" value={se} note="Detecta correctamente a quienes tienen la enfermedad."/><Metric name="Especificidad" value={sp} note="Identifica correctamente a quienes no tienen la enfermedad."/><Metric name="VPP" value={vpp} note="Probabilidad de enfermedad dado un test positivo."/><Metric name="VPN" value={vpn} note="Probabilidad de no enfermedad dado un test negativo."/></div></div></Shell>}
+function Diagnostico() {
+  const [vp,setVp]=useState(80), [fp,setFp]=useState(20), [fn,setFn]=useState(10), [vn,setVn]=useState(90);
+  const se=vp/(vp+fn), sp=vn/(vn+fp), vpp=vp/(vp+fp), vpn=vn/(vn+fn);
+  return <Shell kicker="LABORATORIO EPIDEMIOLÓGICO" title="Pruebas diagnósticas" text="Modifica la tabla 2×2 y observa cómo cambian sensibilidad, especificidad y valores predictivos.">
+    <div className="diag-layout"><div className="panel"><div className="table2x2"><div></div><b>Enfermedad +</b><b>Enfermedad −</b><b>Test +</b><input value={vp} onChange={e=>setVp(+e.target.value)}/><input value={fp} onChange={e=>setFp(+e.target.value)}/><b>Test −</b><input value={fn} onChange={e=>setFn(+e.target.value)}/><input value={vn} onChange={e=>setVn(+e.target.value)}/></div></div><div className="metrics"><Metric name="Sensibilidad" value={se} note="Detecta correctamente a quienes tienen la enfermedad."/><Metric name="Especificidad" value={sp} note="Identifica correctamente a quienes no tienen la enfermedad."/><Metric name="VPP" value={vpp} note="Probabilidad de enfermedad dado un test positivo."/><Metric name="VPN" value={vpn} note="Probabilidad de no enfermedad dado un test negativo."/></div></div>
+  </Shell>;
+}
 function Metric({name,value,note}:any){return <div className="metric"><span>{name}</span><strong>{percent(value)}</strong><p>{note}</p></div>}
 
-function Disenos(){const[i,setI]=useState(0);const[selected,setSelected]=useState('');const d=designs[i];const options=['Transversal','Cohorte','Caso-control','Ensayo clínico aleatorizado'];const ok=selected===d.a;return <Shell kicker="UNIDAD II · HERRAMIENTA 03" title="Selector de diseños epidemiológicos" text="Identifica cómo se obtuvo la información y elige el diseño más apropiado."><div className="case-card"><span>CASO {i+1} DE {designs.length}</span><h2>{d.q}</h2><div className="answers">{options.map(o=><button key={o} className={selected===o?(ok?'correct':'wrong'):''} onClick={()=>setSelected(o)}>{o}</button>)}</div>{selected&&<div className={`explain ${ok?'ok':'no'}`}><b>{ok?'Correcto':'Revisa tu elección'}</b><p>{d.why}</p></div>}<div className="case-actions"><button className="secondary dark" onClick={()=>{setI((i-1+designs.length)%designs.length);setSelected('')}}>Anterior</button><button className="primary" onClick={()=>{setI((i+1)%designs.length);setSelected('')}}>Siguiente <ArrowRight size={17}/></button></div></div></Shell>}
+function Disenos(){
+  const [i,setI]=useState(0), [selected,setSelected]=useState('');
+  const d=designCases[i];
+  const options=['Transversal','Cohorte','Caso-control','Ensayo clínico aleatorizado','Cuasiexperimental'];
+  const ok=selected===d.a;
+  return <Shell kicker="LABORATORIO EPIDEMIOLÓGICO" title="Selector de diseños" text="Ocho escenarios aplicados para reconocer cómo se obtuvo la información y qué diseño corresponde.">
+    <div className="case-card"><span>CASO {i+1} DE {designCases.length}</span><h2>{d.q}</h2><div className="answers">{options.map(o=><button key={o} className={selected===o?(ok?'correct':'wrong'):''} onClick={()=>setSelected(o)}>{o}</button>)}</div>{selected&&<div className={`explain ${ok?'ok':'no'}`}><b>{ok?'Correcto':'Revisa tu elección'}</b><p>{d.why}</p></div>}<div className="case-actions"><span>Diseño epidemiológico</span><button className="primary" onClick={()=>{setI((i+1)%designCases.length);setSelected('')}}>Siguiente <ArrowRight size={17}/></button></div></div>
+  </Shell>;
+}
 
 function Challenge(){
- const questions=useMemo(()=>[
-  {q:'¿Cuál distingue mejor a la salud pública de la atención clínica individual?',o:['Su foco en poblaciones y acciones colectivas','El uso de medicamentos','El diagnóstico por imágenes','La atención hospitalaria'],a:0},
-  {q:'Educación, ocupación e ingreso corresponden principalmente a:',o:['Determinantes estructurales','Pruebas diagnósticas','Sesgos de selección','Desenlaces clínicos'],a:0},
-  {q:'En 200 residentes, 50 presentan infección respiratoria al momento de la evaluación. ¿Cuál es la prevalencia?',o:['10%','25%','40%','50%'],a:1},
-  {q:'Si comparamos residentes expuestos y no expuestos y los seguimos en el tiempo, el diseño es:',o:['Transversal','Caso-control','Cohorte','Serie de casos'],a:2},
-  {q:'¿Cuál conjunto corresponde a las garantías explícitas GES?',o:['Acceso, calidad, oportunidad y protección financiera','Cobertura, rentabilidad, rapidez y elección','Acceso, gratuidad universal, docencia y oportunidad','Calidad, financiamiento privado, acceso y docencia'],a:0}
- ],[]);
- const[idx,setIdx]=useState(0),[score,setScore]=useState(0),[done,setDone]=useState(false),[picked,setPicked]=useState<number|null>(null);const q=questions[idx];
- function choose(j:number){if(picked!==null)return;setPicked(j);if(j===q.a)setScore(s=>s+1)} function next(){if(idx===questions.length-1)setDone(true);else{setIdx(i=>i+1);setPicked(null)}} function reset(){setIdx(0);setScore(0);setDone(false);setPicked(null)}
- return <Shell kicker="DESAFÍO INTEGRADOR" title="EPI Challenge" text="Integra Salud Pública y Epidemiología en una ronda breve de aplicación.">{!done?<div className="case-card"><div className="progress"><i style={{width:`${((idx+1)/questions.length)*100}%`}}/></div><span>PREGUNTA {idx+1} DE {questions.length}</span><h2>{q.q}</h2><div className="answers">{q.o.map((o,j)=><button key={o} onClick={()=>choose(j)} className={picked===null?'':j===q.a?'correct':picked===j?'wrong':''}>{o}</button>)}</div>{picked!==null&&<div className={`explain ${picked===q.a?'ok':'no'}`}><b>{picked===q.a?'¡Bien!':'Respuesta incorrecta'}</b><p>{picked===q.a?'La respuesta corresponde al razonamiento esperado.':'Revisa el concepto y vuelve a intentarlo en una nueva ronda.'}</p></div>}<div className="case-actions"><span>Puntaje: {score}</span><button className="primary" disabled={picked===null} onClick={next}>{idx===questions.length-1?'Ver resultado':'Continuar'} <ArrowRight size={17}/></button></div></div>:<div className="finish"><Stethoscope size={42}/><span>DESAFÍO COMPLETADO</span><strong>{score}/{questions.length}</strong><h2>{score===questions.length?'Excelente dominio inicial':score>=4?'Buen desempeño':'Conviene reforzar algunos contenidos'}</h2><p>Vuelve a las unidades para revisar conceptos y repetir el desafío.</p><button className="primary" onClick={reset}><RotateCcw size={17}/> Repetir desafío</button></div>}</Shell>
+  const set = useMemo(() => [...challengeQuestions].sort(() => Math.random() - .5).slice(0,10), []);
+  const [idx,setIdx]=useState(0), [score,setScore]=useState(0), [done,setDone]=useState(false), [picked,setPicked]=useState<number|null>(null);
+  const q=set[idx];
+  function choose(j:number){if(picked!==null)return;setPicked(j);if(j===q.answer)setScore(s=>s+1)}
+  function next(){if(idx===set.length-1)setDone(true);else{setIdx(i=>i+1);setPicked(null)}}
+  function reset(){window.location.reload()}
+  return <Shell kicker="DESAFÍO INTEGRADOR" title="EPI Challenge" text="Cada intento selecciona 10 preguntas desde un banco mayor, combinando Salud Pública, Enfermería y Epidemiología.">
+    {!done?<div className="case-card challenge-card"><div className="progress"><i style={{width:`${((idx+1)/set.length)*100}%`}}/></div><span>PREGUNTA {idx+1} DE {set.length}</span><h2>{q.q}</h2><div className="answers">{q.options.map((o,j)=><button key={o} onClick={()=>choose(j)} className={picked===null?'':j===q.answer?'correct':picked===j?'wrong':''}>{o}</button>)}</div>{picked!==null&&<div className={`explain ${picked===q.answer?'ok':'no'}`}><b>{picked===q.answer?'¡Bien!':'Respuesta incorrecta'}</b><p>{q.feedback}</p></div>}<div className="case-actions"><span>Puntaje: {score}</span><button className="primary" disabled={picked===null} onClick={next}>{idx===set.length-1?'Ver resultado':'Continuar'} <ArrowRight size={17}/></button></div></div>:<div className="finish"><GraduationCap size={42}/><span>DESAFÍO COMPLETADO</span><strong>{score}/{set.length}</strong><h2>{score>=9?'Excelente integración':score>=7?'Buen desempeño':score>=5?'Base en desarrollo':'Conviene reforzar la ruta de aprendizaje'}</h2><p>El objetivo no es memorizar: es conectar población, contexto, evidencia y decisiones de Enfermería.</p><button className="primary" onClick={reset}><RotateCcw size={17}/> Nuevo desafío</button></div>}
+  </Shell>;
 }
